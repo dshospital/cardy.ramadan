@@ -497,10 +497,124 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
   .tab-btn{padding:.8rem .7rem;font-size:.75rem;}
   .step span{display:none;}
 }
+
+/* ─── SAVE MODAL ─── */
+#save-modal {
+  display:none;position:fixed;inset:0;z-index:2000;
+  background:rgba(0,0,0,0.88);
+  justify-content:center;align-items:center;
+  padding:1rem;
+  animation:fadeIn .25s ease;
+}
+#save-modal.show{display:flex;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{
+  background:var(--white);border-radius:18px;
+  overflow:hidden;max-width:480px;width:100%;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+  display:flex;flex-direction:column;
+  max-height:92vh;
+}
+.modal-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 1.1rem;border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg,var(--red),var(--red-dark));
+  color:white;flex-shrink:0;
+}
+.modal-hd h3{font-size:.92rem;font-weight:700;}
+.modal-close{
+  background:rgba(255,255,255,.2);border:none;border-radius:6px;
+  color:white;font-size:1.1rem;width:28px;height:28px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .18s;
+}
+.modal-close:hover{background:rgba(255,255,255,.35);}
+.modal-body{
+  padding:1rem;overflow-y:auto;
+  display:flex;flex-direction:column;align-items:center;gap:.9rem;
+}
+.modal-img-wrap{
+  width:100%;border-radius:10px;overflow:hidden;
+  border:2px solid var(--border);
+  background:#e4ddd3;
+  display:flex;justify-content:center;align-items:center;
+}
+.modal-img-wrap img{
+  display:block;max-width:100%;max-height:55vh;
+  object-fit:contain;
+}
+.modal-instructions{
+  background:rgba(192,39,45,0.06);
+  border:1px solid rgba(192,39,45,0.14);
+  border-radius:10px;padding:.8rem 1rem;
+  width:100%;font-size:.82rem;color:var(--text-mid);
+  line-height:1.75;text-align:center;
+}
+.modal-instructions strong{color:var(--red);}
+.modal-instructions .inst-ios{display:none;}
+.modal-instructions .inst-android{display:none;}
+.modal-instructions .inst-desktop{display:none;}
+.modal-btn-row{display:flex;gap:.6rem;width:100%;}
+.modal-dl-btn{
+  flex:1;padding:.75rem;
+  background:linear-gradient(135deg,var(--red),var(--red-dark));
+  color:white;border:none;border-radius:9px;
+  font-family:inherit;font-size:.85rem;font-weight:700;
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:.4rem;
+}
+.modal-dl-btn:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(192,39,45,.35);}
+.modal-cancel-btn{
+  padding:.75rem 1rem;
+  background:var(--cream);color:var(--text-muted);
+  border:1.5px solid var(--border);border-radius:9px;
+  font-family:inherit;font-size:.82rem;font-weight:600;
+  cursor:pointer;transition:all .2s;
+}
+.modal-cancel-btn:hover{background:var(--cream-dark);}
 </style>
 </head>
 <body>
 <canvas id="export-canvas"></canvas>
+
+<!-- ─── SAVE MODAL ─── -->
+<div id="save-modal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h3>💾 حفظ البطاقة</h3>
+      <button class="modal-close" onclick="closeSaveModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-img-wrap">
+        <img id="modal-preview-img" src="" alt="البطاقة النهائية">
+      </div>
+      <div class="modal-instructions" id="modal-instructions">
+        <div class="inst-ios">
+          📱 <strong>على iPhone / iPad:</strong><br>
+          اضغط مطولاً على الصورة أعلاه<br>
+          ثم اختر <strong>«إضافة إلى الصور»</strong> أو <strong>«حفظ الصورة»</strong>
+        </div>
+        <div class="inst-android">
+          📱 <strong>على Android:</strong><br>
+          اضغط على زر التحميل أدناه<br>
+          أو اضغط مطولاً على الصورة واختر <strong>«تحميل الصورة»</strong>
+        </div>
+        <div class="inst-desktop">
+          💻 <strong>على الكمبيوتر:</strong><br>
+          اضغط على زر التحميل أدناه<br>
+          أو انقر بزر الفأرة الأيمن واختر <strong>«حفظ الصورة»</strong>
+        </div>
+      </div>
+      <div class="modal-btn-row">
+        <button class="modal-dl-btn" id="modal-dl-btn" onclick="doFinalDownload()">
+          ⬇ تحميل البطاقة
+        </button>
+        <button class="modal-cancel-btn" onclick="closeSaveModal()">إغلاق</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="loading"><div class="spin"></div><p>جارٍ تجهيز الصورة...</p></div>
 <div id="toast"></div>
 
@@ -515,7 +629,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
       </div>
     </div>
     <div class="header-right">
-      <a class="btn-appt" href="https://daralshefa.com.sa/mobile-application/" target="_blank">
+      <a class="btn-appt" href="https://daralshefa.com.sa/appointments/" target="_blank">
         📅 احجز موعدك
       </a>
     </div>
@@ -856,7 +970,7 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
           <h3>📅 احجز موعدك الطبي الآن</h3>
           <p>خدماتنا الطبية متاحة طوال شهر رمضان المبارك<br>احجز موعدك بسهولة عبر تطبيق دار الشفاء</p>
         </div>
-        <a class="btn-book" href="https://daralshefa.com.sa/mobile-application/" target="_blank">
+        <a class="btn-book" href="https://daralshefa.com.sa/appointments/" target="_blank">
           📲 احجز الآن
         </a>
       </div>
@@ -928,7 +1042,7 @@ const SIZES = {
   t1: { W:1200, H:627,  label:'linkedin' },
   t2: { W:1080, H:1920, label:'story'    }
 };
-const APPT_URL = 'https://daralshefa.com.sa/mobile-application/';
+const APPT_URL = 'https://daralshefa.com.sa/appointments/';
 
 // ─── STATE ───
 const state = {
@@ -1103,43 +1217,75 @@ function drawImgOnCanvas(ctx, img, sz) {
   ctx.drawImage(img, dx, dy, dw, dh);
 }
 
-function triggerDownload(canvas, name, label) {
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+// Detect device type
+function getDevice() {
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  return 'desktop';
+}
 
-  function doDownload(url, isObjectUrl) {
-    if (isMobile && isSafari) {
-      // iOS Safari: لا يدعم download attribute — افتح في تاب جديد
-      showLoading(false);
-      showToast('📥 اضغط مطولاً على الصورة ثم «حفظ»');
-      window.open(url, '_blank');
-      if (isObjectUrl) setTimeout(() => URL.revokeObjectURL(url), 3000);
-    } else {
-      const a = document.createElement('a');
-      a.download = `ramadan-daralshefa-${name}-${label}.png`;
-      a.href = url;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        if (isObjectUrl) URL.revokeObjectURL(url);
-      }, 300);
-      showLoading(false);
-      showToast('✅ تم التحميل! رمضان كريم 🌙');
-    }
-  }
+// Global: current dataURL for modal download
+let _currentDataUrl = '';
+let _currentFilename = '';
 
-  if (canvas.toBlob) {
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      doDownload(url, true);
-    }, 'image/png', 1.0);
+function showSaveModal(dataUrl, filename) {
+  _currentDataUrl = dataUrl;
+  _currentFilename = filename;
+
+  // Show image
+  document.getElementById('modal-preview-img').src = dataUrl;
+
+  // Show correct instructions
+  const device = getDevice();
+  const inst = document.getElementById('modal-instructions');
+  inst.querySelector('.inst-ios').style.display     = device === 'ios'     ? 'block' : 'none';
+  inst.querySelector('.inst-android').style.display = device === 'android' ? 'block' : 'none';
+  inst.querySelector('.inst-desktop').style.display = device === 'desktop' ? 'block' : 'none';
+
+  // iOS: hide download button (can't trigger download, user must long-press)
+  document.getElementById('modal-dl-btn').style.display = device === 'ios' ? 'none' : 'flex';
+
+  document.getElementById('save-modal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSaveModal() {
+  document.getElementById('save-modal').classList.remove('show');
+  document.body.style.overflow = '';
+  _currentDataUrl = '';
+}
+
+function doFinalDownload() {
+  if (!_currentDataUrl) return;
+  const device = getDevice();
+
+  if (device === 'android') {
+    // Android Chrome: direct download via anchor click
+    const a = document.createElement('a');
+    a.href = _currentDataUrl;
+    a.download = _currentFilename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 300);
+    showToast('✅ جارٍ التحميل في مجلد التنزيلات');
   } else {
-    const url = canvas.toDataURL('image/png', 1.0);
-    doDownload(url, false);
+    // Desktop
+    const a = document.createElement('a');
+    a.href = _currentDataUrl;
+    a.download = _currentFilename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 300);
+    showToast('✅ تم التحميل! رمضان كريم 🌙');
   }
 }
+
+// Close modal when clicking backdrop
+document.getElementById('save-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeSaveModal();
+});
 
 function downloadCard(tid) {
   const name = document.getElementById(tid + 'name').value.trim();
@@ -1149,66 +1295,44 @@ function downloadCard(tid) {
   markStep(4, true);
 
   const fontSize = parseInt(document.getElementById(tid + 'size').value);
-  const st = state[tid];
-  const sz = SIZES[tid];
-  const imgEl = document.getElementById(tid + 'img');
-  const imgSrc = imgEl.src; // already base64 data URI
+  const st  = state[tid];
+  const sz  = SIZES[tid];
+  const imgSrc = document.getElementById(tid + 'img').src;
+  const filename = `ramadan-daralshefa-${name}-${sz.label}.png`;
 
   const canvas = document.getElementById('export-canvas');
-  canvas.width = sz.W;
+  canvas.width  = sz.W;
   canvas.height = sz.H;
   const ctx = canvas.getContext('2d');
 
-  // الطريقة المضمونة: إذا الصورة base64 (data URI) نرسمها مباشرة
-  // إذا URL خارجي نحاول fetch أولاً لتجنب CORS على الجوال
-  function renderAndDownload(src) {
+  function renderAll(imageSrc) {
     const img = new Image();
-    if (!src.startsWith('data:')) {
-      img.crossOrigin = 'anonymous';
-    }
     img.onload = () => {
-      // تأكد من تحميل الخط قبل الرسم
+      drawImgOnCanvas(ctx, img, sz);
+
       const fontStr = `700 ${fontSize}px "IBM Plex Sans Arabic"`;
-      if (document.fonts && document.fonts.load) {
-        document.fonts.load(fontStr).then(() => {
-          drawImgOnCanvas(ctx, img, sz);
-          drawNameOnCanvas(ctx, name, fontSize, st, sz);
-          triggerDownload(canvas, name, sz.label);
-        }).catch(() => {
-          drawImgOnCanvas(ctx, img, sz);
-          drawNameOnCanvas(ctx, name, fontSize, st, sz);
-          triggerDownload(canvas, name, sz.label);
-        });
-      } else {
-        drawImgOnCanvas(ctx, img, sz);
+      const doRender = () => {
         drawNameOnCanvas(ctx, name, fontSize, st, sz);
-        triggerDownload(canvas, name, sz.label);
+        const dataUrl = canvas.toDataURL('image/png', 1.0);
+        showLoading(false);
+        showSaveModal(dataUrl, filename);
+      };
+
+      if (document.fonts && document.fonts.load) {
+        document.fonts.load(fontStr).then(doRender).catch(doRender);
+      } else {
+        doRender();
       }
     };
     img.onerror = () => {
       showLoading(false);
-      showToast('⚠️ تعذّر رسم الصورة على الكانفاس');
+      showToast('⚠️ تعذّر تجهيز الصورة');
     };
-    img.src = src;
+    img.src = imageSrc;
   }
 
-  if (imgSrc.startsWith('data:')) {
-    // صورة مدمجة base64 — مباشرة وبدون مشاكل CORS
-    renderAndDownload(imgSrc);
-  } else {
-    // رابط خارجي — نحاول fetch لتحويلها إلى blob
-    fetch(imgSrc)
-      .then(r => r.blob())
-      .then(blob => {
-        const reader = new FileReader();
-        reader.onload = e => renderAndDownload(e.target.result);
-        reader.readAsDataURL(blob);
-      })
-      .catch(() => {
-        // إذا فشل الـ fetch نجرب مباشرة
-        renderAndDownload(imgSrc);
-      });
-  }
+  // الصورة base64 مدمجة — ترسم مباشرة بدون CORS
+  renderAll(imgSrc);
 }
 
 // ─── SHARE ───
