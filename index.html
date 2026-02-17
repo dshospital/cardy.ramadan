@@ -1078,6 +1078,69 @@ wireTab('t2');
 window.addEventListener('resize', () => { updateOverlay('t1'); updateOverlay('t2'); });
 
 // ─── DOWNLOAD ───
+function drawNameOnCanvas(ctx, name, fontSize, st, sz) {
+  const pct = getPct(st.pos);
+  const tx = pct.x * sz.W + (st.xOff / 100) * sz.W;
+  const ty = pct.y * sz.H + (st.yOff / 100) * sz.H;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `700 ${fontSize}px "IBM Plex Sans Arabic", Arial`;
+  ctx.fillStyle = st.color;
+  ctx.shadowColor = 'rgba(0,0,0,0.82)';
+  ctx.shadowBlur = Math.round(fontSize * 0.35);
+  ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+  ctx.fillText(name, tx, ty);
+  ctx.restore();
+}
+
+function drawImgOnCanvas(ctx, img, sz) {
+  const ia = img.width / img.height;
+  const ca = sz.W / sz.H;
+  let dw, dh, dx, dy;
+  if (ia > ca) { dh=sz.H; dw=sz.H*ia; dx=(sz.W-dw)/2; dy=0; }
+  else          { dw=sz.W; dh=sz.W/ia; dx=0; dy=(sz.H-dh)/2; }
+  ctx.drawImage(img, dx, dy, dw, dh);
+}
+
+function triggerDownload(canvas, name, label) {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+  function doDownload(url, isObjectUrl) {
+    if (isMobile && isSafari) {
+      // iOS Safari: لا يدعم download attribute — افتح في تاب جديد
+      showLoading(false);
+      showToast('📥 اضغط مطولاً على الصورة ثم «حفظ»');
+      window.open(url, '_blank');
+      if (isObjectUrl) setTimeout(() => URL.revokeObjectURL(url), 3000);
+    } else {
+      const a = document.createElement('a');
+      a.download = `ramadan-daralshefa-${name}-${label}.png`;
+      a.href = url;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        if (isObjectUrl) URL.revokeObjectURL(url);
+      }, 300);
+      showLoading(false);
+      showToast('✅ تم التحميل! رمضان كريم 🌙');
+    }
+  }
+
+  if (canvas.toBlob) {
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      doDownload(url, true);
+    }, 'image/png', 1.0);
+  } else {
+    const url = canvas.toDataURL('image/png', 1.0);
+    doDownload(url, false);
+  }
+}
+
 function downloadCard(tid) {
   const name = document.getElementById(tid + 'name').value.trim();
   if (!name) { showToast('⚠️ يرجى كتابة الاسم أولاً'); return; }
@@ -1088,55 +1151,64 @@ function downloadCard(tid) {
   const fontSize = parseInt(document.getElementById(tid + 'size').value);
   const st = state[tid];
   const sz = SIZES[tid];
-  const imgSrc = document.getElementById(tid + 'img').src;
+  const imgEl = document.getElementById(tid + 'img');
+  const imgSrc = imgEl.src; // already base64 data URI
 
   const canvas = document.getElementById('export-canvas');
   canvas.width = sz.W;
   canvas.height = sz.H;
   const ctx = canvas.getContext('2d');
 
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    // Cover fill
-    const ia = img.width / img.height;
-    const ca = sz.W / sz.H;
-    let dw, dh, dx, dy;
-    if (ia > ca) { dh=sz.H; dw=sz.H*ia; dx=(sz.W-dw)/2; dy=0; }
-    else          { dw=sz.W; dh=sz.W/ia; dx=0; dy=(sz.H-dh)/2; }
-    ctx.drawImage(img, dx, dy, dw, dh);
+  // الطريقة المضمونة: إذا الصورة base64 (data URI) نرسمها مباشرة
+  // إذا URL خارجي نحاول fetch أولاً لتجنب CORS على الجوال
+  function renderAndDownload(src) {
+    const img = new Image();
+    if (!src.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
+    }
+    img.onload = () => {
+      // تأكد من تحميل الخط قبل الرسم
+      const fontStr = `700 ${fontSize}px "IBM Plex Sans Arabic"`;
+      if (document.fonts && document.fonts.load) {
+        document.fonts.load(fontStr).then(() => {
+          drawImgOnCanvas(ctx, img, sz);
+          drawNameOnCanvas(ctx, name, fontSize, st, sz);
+          triggerDownload(canvas, name, sz.label);
+        }).catch(() => {
+          drawImgOnCanvas(ctx, img, sz);
+          drawNameOnCanvas(ctx, name, fontSize, st, sz);
+          triggerDownload(canvas, name, sz.label);
+        });
+      } else {
+        drawImgOnCanvas(ctx, img, sz);
+        drawNameOnCanvas(ctx, name, fontSize, st, sz);
+        triggerDownload(canvas, name, sz.label);
+      }
+    };
+    img.onerror = () => {
+      showLoading(false);
+      showToast('⚠️ تعذّر رسم الصورة على الكانفاس');
+    };
+    img.src = src;
+  }
 
-    // Name
-    const pct = getPct(st.pos);
-    const tx = pct.x * sz.W + (st.xOff / 100) * sz.W;
-    const ty = pct.y * sz.H + (st.yOff / 100) * sz.H;
-
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = `700 ${fontSize}px "IBM Plex Sans Arabic", Arial`;
-    ctx.fillStyle = st.color;
-    ctx.shadowColor = 'rgba(0,0,0,0.82)';
-    ctx.shadowBlur = Math.round(fontSize * 0.3);
-    ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
-    ctx.fillText(name, tx, ty);
-    ctx.restore();
-
-    const url = canvas.toDataURL('image/png', 1.0);
-    const a = document.createElement('a');
-    a.download = `ramadan-daralshefa-${name}-${sz.label}.png`;
-    a.href = url;
-    a.click();
-
-    showLoading(false);
-    showToast('✅ تم التحميل! رمضان كريم 🌙');
-  };
-
-  img.onerror = () => {
-    showLoading(false);
-    showToast('⚠️ تعذّر تحميل الصورة — تأكد من الاتصال بالإنترنت');
-  };
-  img.src = imgSrc;
+  if (imgSrc.startsWith('data:')) {
+    // صورة مدمجة base64 — مباشرة وبدون مشاكل CORS
+    renderAndDownload(imgSrc);
+  } else {
+    // رابط خارجي — نحاول fetch لتحويلها إلى blob
+    fetch(imgSrc)
+      .then(r => r.blob())
+      .then(blob => {
+        const reader = new FileReader();
+        reader.onload = e => renderAndDownload(e.target.result);
+        reader.readAsDataURL(blob);
+      })
+      .catch(() => {
+        // إذا فشل الـ fetch نجرب مباشرة
+        renderAndDownload(imgSrc);
+      });
+  }
 }
 
 // ─── SHARE ───
